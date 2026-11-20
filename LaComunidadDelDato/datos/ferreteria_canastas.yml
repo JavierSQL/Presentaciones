@@ -1,0 +1,345 @@
+# YAML: ferreteria_canastas.yml
+# Charla: La Comunidad del Dato (Comunidad de Data & AI Costa Rica, 2026-11-23)
+# Dominio: Retail / ferretería costarricense (ficticia)
+#
+# Extiende el generador de datos sintéticos (github.com/JavierSQL/GeneradorDatosSinteticos)
+# con un tipo de dataset nuevo: "baskets". El generador base arma cada fila independiente;
+# acá cada TIQUETE nace de una MISIÓN (el motivo del viaje) que arrastra acompañantes con
+# probabilidades. Ese es el conocimiento del mostrador escrito como datos.
+#
+# Patrones que este YAML planta A PROPÓSITO (los valida el script de prototipo):
+#   1. TORNILLOS GYPSUM: lo que más gente lleva, pero casi nunca es el motivo (acompañante masivo).
+#   2. CEMENTO GRIS y ACRILICAS: imanes clásicos. La acrílica arrastra brochas y felpas.
+#   3. SERVICIO DE CORTE: casi no vende y el ERP lo marca C, pero quien lo usa vino por él
+#      y arrastra la canasta más grande (tableros, cantos, herrajes, tornillos).
+#   4. PISO CERAMICO -> PEGA PISOS: arrastre fuerte, segundo ejemplo de halo.
+#   5. BODEGA CENTRAL: vende a constructoras con pedidos grandes partidos en facturas de 20
+#      líneas. Si no se separa por Formato, distorsiona el tráfico de mostrador.
+#
+# Todo es ficticio: empresa, sucursales, artículos y precios. Sin marcas reales.
+
+dataset:
+  name: ferreteria_canastas
+  type: baskets
+  description: "Un año de tiquetes de una ferretería ficticia con canastas por misión"
+  schema: Ferreteria
+  output: "Files/Data/Ferreteria"
+  seed: 2026
+  desde: "2025-01-01"
+  hasta: "2025-12-31"
+  tiquetes: 500000            # tiquetes de mostrador + pedidos (antes de partir en facturas)
+  lineas_por_factura: 20      # el POS corta una compra grande cada 20 líneas
+  moneda: CRC
+  credito_prob: 0.08          # % de tiquetes de tienda a crédito (en bodega se usa el de la sucursal)
+  peso_dia_semana:            # lunes=0 ... domingo=6
+    [1.00, 0.95, 0.95, 1.00, 1.10, 1.35, 0.45]
+
+empresa:
+  nombre: "Ferretería La Comunidad"
+
+# ----------------------------------------------------------------------
+# Sucursales. Formato es el atributo que "nadie mantenía" (causa de ingeniería).
+# ----------------------------------------------------------------------
+sucursales:
+  - {codigo: S01, nombre: "La Comunidad San José Centro", provincia: "San José", formato: Tienda, peso: 0.20}
+  - {codigo: S02, nombre: "La Comunidad Heredia",         provincia: "Heredia",  formato: Tienda, peso: 0.17}
+  - {codigo: S03, nombre: "La Comunidad Cartago",         provincia: "Cartago",  formato: Tienda, peso: 0.16}
+  - {codigo: S04, nombre: "La Comunidad Alajuela",        provincia: "Alajuela", formato: Tienda, peso: 0.16}
+  - {codigo: S05, nombre: "La Comunidad Pérez Zeledón",   provincia: "San José", formato: Tienda, peso: 0.11}
+  - {codigo: S06, nombre: "La Comunidad Liberia",         provincia: "Guanacaste", formato: Tienda, peso: 0.10}
+  - {codigo: B01, nombre: "Bodega Central Constructores", provincia: "Alajuela", formato: Bodega, peso: 0.07,
+     credito_prob: 0.65}
+
+# ----------------------------------------------------------------------
+# Relleno: líneas sueltas que se agregan a tiquetes que no son de una sola cosa.
+# Cantidad ~ Poisson(media). Cada sublínea entra según su peso_relleno.
+# ----------------------------------------------------------------------
+relleno:
+  media_lineas: 1.1
+
+# Flete: acompaña compras grandes; no es una decisión de compra.
+flete:
+  sublinea: FLETE
+  monto_minimo: 150000
+  prob: 0.35
+
+# ----------------------------------------------------------------------
+# Catálogo: Departamento > Línea > Sublínea > Artículo
+#   precio:       [min, max] precio unitario en colones
+#   cantidad:     [min, max] unidades por línea
+#   articulos:    lista de nombres, o un entero (se generan "<Sublínea> 01..N")
+#   peso_mision:  qué tan seguido es el MOTIVO del viaje (relativo)
+#   peso_relleno: qué tan seguido se agrega suelta a otra compra (relativo)
+#   sola:         prob. de que, cuando es el motivo, el tiquete no traiga nada más
+#   tipo:         producto (default) | servicio
+# ----------------------------------------------------------------------
+catalogo:
+  - departamento: CONSTRUCCION
+    lineas:
+      - linea: CEMENTO
+        sublineas:
+          - {sublinea: CEMENTO GRIS, precio: [6500, 7500], cantidad: [1, 12], peso_mision: 0.030, peso_relleno: 0.30, sola: 0.45,
+             articulos: ["Cemento gris uso general 50 kg", "Cemento gris uso general 25 kg", "Cemento de alta resistencia 50 kg"]}
+      - linea: MORTEROS
+        sublineas:
+          - {sublinea: REPELLOS, precio: [4500, 6000], cantidad: [1, 8], peso_mision: 0.016, peso_relleno: 0.30, sola: 0.30, articulos: 4}
+          - {sublinea: PEGA PISOS, precio: [5000, 9000], cantidad: [1, 6], peso_mision: 0.006, peso_relleno: 0.15, sola: 0.40, articulos: 5}
+      - linea: AGREGADOS
+        sublineas:
+          - {sublinea: ARENA Y PIEDRA, precio: [2500, 4000], cantidad: [1, 10], peso_mision: 0.008, peso_relleno: 0.20, sola: 0.40, articulos: 4}
+      - linea: GYPSUM
+        sublineas:
+          - {sublinea: LAMINAS GYPSUM, precio: [6500, 9500], cantidad: [1, 15], peso_mision: 0.014, peso_relleno: 0.05, sola: 0.08,
+             articulos: ["Lámina gypsum regular 1/2\" 1.22x2.44", "Lámina gypsum resistente a humedad 1/2\"", "Lámina gypsum exterior 5/8\""]}
+          - {sublinea: PERFILERIA, precio: [2200, 4500], cantidad: [2, 20], peso_mision: 0.004, peso_relleno: 0.20, sola: 0.20, articulos: 6}
+          - {sublinea: MASILLA Y CINTA, precio: [3000, 12000], cantidad: [1, 3], peso_mision: 0.004, peso_relleno: 0.40, sola: 0.40, articulos: 5}
+      - linea: BLOCKS
+        sublineas:
+          - {sublinea: BLOCKS, precio: [450, 650], cantidad: [10, 200], peso_mision: 0.004, peso_relleno: 0.05, sola: 0.50, articulos: 3}
+
+  - departamento: FERRETERIA
+    lineas:
+      - linea: TORNILLOS
+        sublineas:
+          - {sublinea: TORNILLOS GYPSUM, precio: [1800, 4500], cantidad: [1, 3], peso_mision: 0.006, peso_relleno: 1.70, sola: 0.60,
+             articulos: ["Tornillo gypsum punta fina 6x1\" (100 u)", "Tornillo gypsum punta broca 6x1\" (100 u)", "Tornillo gypsum 6x1-5/8\" (100 u)", "Tornillo gypsum punta fina 6x1\" (500 u)"]}
+          - {sublinea: TORNILLOS MELAMINA, precio: [1500, 3800], cantidad: [1, 3], peso_mision: 0.002, peso_relleno: 0.30, sola: 0.50, articulos: 4}
+          - {sublinea: TORNILLOS GENERALES, precio: [300, 2500], cantidad: [1, 10], peso_mision: 0.012, peso_relleno: 1.10, sola: 0.55, articulos: 12}
+      - linea: FIJACION
+        sublineas:
+          - {sublinea: ANCLAJES, precio: [400, 3000], cantidad: [1, 10], peso_mision: 0.006, peso_relleno: 1.00, sola: 0.50, articulos: 8}
+          - {sublinea: SILICONES, precio: [2500, 6000], cantidad: [1, 3], peso_mision: 0.012, peso_relleno: 0.80, sola: 0.40, articulos: 6}
+          - {sublinea: SOLDADURA, precio: [2500, 9000], cantidad: [1, 2], peso_mision: 0.006, peso_relleno: 0.40, sola: 0.40, articulos: 5}
+      - linea: HERRAJES
+        sublineas:
+          - {sublinea: BISAGRAS, precio: [600, 2500], cantidad: [2, 10], peso_mision: 0.004, peso_relleno: 0.30, sola: 0.40, articulos: 6}
+          - {sublinea: RIELES, precio: [2500, 7000], cantidad: [1, 4], peso_mision: 0.002, peso_relleno: 0.15, sola: 0.40, articulos: 5}
+          - {sublinea: JALADERAS, precio: [700, 3000], cantidad: [2, 10], peso_mision: 0.002, peso_relleno: 0.15, sola: 0.40, articulos: 8}
+          - {sublinea: CANDADOS Y CERRADURAS, precio: [3000, 25000], cantidad: [1, 1], peso_mision: 0.010, peso_relleno: 0.20, sola: 0.60, articulos: 10}
+      - linea: DISCOS
+        sublineas:
+          - {sublinea: DISCOS DE CORTE, precio: [900, 3500], cantidad: [1, 5], peso_mision: 0.010, peso_relleno: 0.70, sola: 0.50, articulos: 6}
+          - {sublinea: BROCAS, precio: [800, 6000], cantidad: [1, 4], peso_mision: 0.004, peso_relleno: 0.40, sola: 0.50, articulos: 10}
+      - linea: LLAVES
+        sublineas:
+          - {sublinea: COPIA DE LLAVES, tipo: servicio, precio: [1000, 1500], cantidad: [1, 4], peso_mision: 0.010, peso_relleno: 0.08, sola: 0.80,
+             articulos: ["Copia de llave sencilla", "Copia de llave de seguridad"]}
+
+  - departamento: HERRAMIENTAS
+    lineas:
+      - linea: MANUALES
+        sublineas:
+          - {sublinea: ALBANILERIA, precio: [1500, 9000], cantidad: [1, 2], peso_mision: 0.008, peso_relleno: 0.80, sola: 0.40, articulos: 10}
+          - {sublinea: DE AJUSTE, precio: [2500, 15000], cantidad: [1, 1], peso_mision: 0.010, peso_relleno: 0.40, sola: 0.50, articulos: 12}
+      - linea: ELECTRICAS
+        sublineas:
+          - {sublinea: TALADROS, precio: [25000, 120000], cantidad: [1, 1], peso_mision: 0.006, peso_relleno: 0.02, sola: 0.50, articulos: 6}
+          - {sublinea: ESMERILADORAS, precio: [25000, 80000], cantidad: [1, 1], peso_mision: 0.004, peso_relleno: 0.02, sola: 0.50, articulos: 4}
+      - linea: JARDIN
+        sublineas:
+          - {sublinea: MANGUERAS Y RIEGO, precio: [4000, 25000], cantidad: [1, 1], peso_mision: 0.006, peso_relleno: 0.10, sola: 0.60, articulos: 6}
+
+  - departamento: PINTURAS
+    lineas:
+      - linea: ACRILICAS
+        sublineas:
+          - {sublinea: ACRILICAS, precio: [9000, 28000], cantidad: [1, 4], peso_mision: 0.022, peso_relleno: 0.10, sola: 0.30,
+             articulos: ["Pintura acrílica mate blanco galón", "Pintura acrílica satinada galón", "Pintura acrílica mate blanco cubeta", "Pintura acrílica exterior galón"]}
+      - linea: ANTICORROSIVOS
+        sublineas:
+          - {sublinea: ANTICORROSIVOS, precio: [8000, 22000], cantidad: [1, 3], peso_mision: 0.014, peso_relleno: 0.10, sola: 0.17, articulos: 5}
+      - linea: ACCESORIOS PARA PINTAR
+        sublineas:
+          - {sublinea: BROCHAS, precio: [900, 4500], cantidad: [1, 3], peso_mision: 0.002, peso_relleno: 1.00, sola: 0.40, articulos: 6}
+          - {sublinea: FELPAS Y RODILLOS, precio: [1500, 5500], cantidad: [1, 2], peso_mision: 0.001, peso_relleno: 0.30, sola: 0.40, articulos: 5}
+      - linea: SOLVENTES
+        sublineas:
+          - {sublinea: SOLVENTES, precio: [2000, 6000], cantidad: [1, 2], peso_mision: 0.004, peso_relleno: 0.50, sola: 0.50, articulos: 4}
+      - linea: AEROSOLES
+        sublineas:
+          - {sublinea: AEROSOLES, precio: [2500, 4500], cantidad: [1, 3], peso_mision: 0.006, peso_relleno: 0.30, sola: 0.50, articulos: 8}
+
+  - departamento: ACERO
+    lineas:
+      - linea: VARILLA
+        sublineas:
+          - {sublinea: VARILLA, precio: [2500, 6500], cantidad: [1, 30], peso_mision: 0.010, peso_relleno: 0.10, sola: 0.40, articulos: 4}
+      - linea: TUBO INDUSTRIAL
+        sublineas:
+          - {sublinea: TUBO INDUSTRIAL, precio: [4500, 18000], cantidad: [1, 10], peso_mision: 0.016, peso_relleno: 0.10, sola: 0.15, articulos: 8}
+      - linea: TUBO ESTRUCTURAL
+        sublineas:
+          - {sublinea: TUBO ESTRUCTURAL, precio: [9000, 30000], cantidad: [1, 6], peso_mision: 0.012, peso_relleno: 0.05, sola: 0.15, articulos: 6}
+      - linea: LAMINAS
+        sublineas:
+          - {sublinea: LAMINA DE ZINC, precio: [8000, 25000], cantidad: [1, 12], peso_mision: 0.006, peso_relleno: 0.05, sola: 0.30, articulos: 5}
+
+  - departamento: ACABADOS
+    lineas:
+      - linea: PISOS
+        sublineas:
+          - {sublinea: PISO CERAMICO, precio: [6500, 14000], cantidad: [2, 20], peso_mision: 0.010, peso_relleno: 0.02, sola: 0.25, articulos: 12}
+      - linea: SANITARIOS
+        sublineas:
+          - {sublinea: DUCHAS, precio: [6000, 35000], cantidad: [1, 1], peso_mision: 0.007, peso_relleno: 0.02, sola: 0.60, articulos: 6}
+          - {sublinea: GRIFERIA, precio: [8000, 45000], cantidad: [1, 2], peso_mision: 0.007, peso_relleno: 0.05, sola: 0.50, articulos: 10}
+      - linea: PUERTAS
+        sublineas:
+          - {sublinea: PUERTAS, precio: [35000, 120000], cantidad: [1, 1], peso_mision: 0.004, peso_relleno: 0.01, sola: 0.40, articulos: 6}
+
+  - departamento: FONTANERIA
+    lineas:
+      - linea: PVC
+        sublineas:
+          - {sublinea: TUBO PVC, precio: [2500, 12000], cantidad: [1, 6], peso_mision: 0.014, peso_relleno: 0.90, sola: 0.25, articulos: 8}
+          - {sublinea: ACCESORIOS PVC, precio: [150, 1500], cantidad: [2, 15], peso_mision: 0.010, peso_relleno: 1.10, sola: 0.15, articulos: 20}
+          - {sublinea: PEGAMENTO PVC, precio: [1500, 4500], cantidad: [1, 1], peso_mision: 0.002, peso_relleno: 0.80, sola: 0.40, articulos: 3}
+
+  - departamento: ELECTRICO
+    lineas:
+      - linea: CABLE
+        sublineas:
+          - {sublinea: CABLE ELECTRICO, precio: [350, 1500], cantidad: [5, 50], peso_mision: 0.012, peso_relleno: 0.30, sola: 0.40, articulos: 8}
+      - linea: INTERRUPTORES
+        sublineas:
+          - {sublinea: TOMAS E INTERRUPTORES, precio: [900, 4500], cantidad: [1, 6], peso_mision: 0.008, peso_relleno: 0.80, sola: 0.40, articulos: 10}
+      - linea: ILUMINACION
+        sublineas:
+          - {sublinea: BOMBILLOS LED, precio: [1200, 5000], cantidad: [1, 4], peso_mision: 0.012, peso_relleno: 0.50, sola: 0.60, articulos: 8}
+      - linea: CINTAS
+        sublineas:
+          - {sublinea: CINTA AISLANTE, precio: [500, 1500], cantidad: [1, 3], peso_mision: 0.001, peso_relleno: 0.80, sola: 0.40, articulos: 3}
+
+  - departamento: MADERAS Y TABLEROS
+    lineas:
+      - linea: MELAMINA
+        sublineas:
+          - {sublinea: TABLEROS MELAMINA, precio: [28000, 48000], cantidad: [1, 3], peso_mision: 0.002, peso_relleno: 0.01, sola: 0.50,
+             articulos: ["Tablero melamina blanco 15 mm 1.83x2.44", "Tablero melamina color madera 15 mm", "Tablero melamina blanco 18 mm"]}
+          - {sublinea: CANTOS, precio: [250, 450], cantidad: [5, 25], peso_mision: 0.001, peso_relleno: 0.05, sola: 0.40, articulos: 6}
+      - linea: MADERA
+        sublineas:
+          - {sublinea: PINO SIN TRATAR, precio: [1500, 9000], cantidad: [2, 12], peso_mision: 0.012, peso_relleno: 0.10, sola: 0.30, articulos: 8}
+      - linea: PEGAMENTOS
+        sublineas:
+          - {sublinea: PEGAMENTO MADERA, precio: [2000, 6000], cantidad: [1, 2], peso_mision: 0.002, peso_relleno: 0.20, sola: 0.40, articulos: 3}
+
+  - departamento: SERVICIOS
+    lineas:
+      - linea: CORTE
+        sublineas:
+          # Nombre críptico a propósito: así está en el ERP y nadie lo describió (causa semántica).
+          - {sublinea: SERV CORTE, tipo: servicio, precio: [500, 500], cantidad: [2, 12], peso_mision: 0.005, peso_relleno: 0.00, sola: 0.04,
+             articulos: ["SERV CORTE TABLERO X CORTE"]}
+      - linea: TRANSPORTE
+        sublineas:
+          - {sublinea: FLETE, tipo: servicio, precio: [3500, 15000], cantidad: [1, 1], peso_mision: 0.000, peso_relleno: 0.00, sola: 0.00,
+             articulos: ["Flete local", "Flete fuera de zona"]}
+
+# ----------------------------------------------------------------------
+# Misiones con acompañantes propios. Una sublínea sin entrada acá es misión "simple":
+# su motivo + relleno. Los acompañantes se agregan con su prob. si el tiquete no es "sola".
+#   variantes: alternativas excluyentes dentro de la misión (se elige una por prob.)
+# ----------------------------------------------------------------------
+misiones:
+  - motivo: CEMENTO GRIS
+    acompanantes:
+      - {sublinea: ARENA Y PIEDRA, prob: 0.25}
+      - {sublinea: VARILLA, prob: 0.12}
+      - {sublinea: ALBANILERIA, prob: 0.10}
+      - {sublinea: BLOCKS, prob: 0.05}
+
+  - motivo: LAMINAS GYPSUM
+    acompanantes:
+      - {sublinea: TORNILLOS GYPSUM, prob: 0.92}
+      - {sublinea: PERFILERIA, prob: 0.85}
+      - {sublinea: MASILLA Y CINTA, prob: 0.60}
+      - {sublinea: ANCLAJES, prob: 0.30}
+      - {sublinea: DISCOS DE CORTE, prob: 0.10}
+
+  - motivo: PERFILERIA
+    acompanantes:
+      - {sublinea: TORNILLOS GYPSUM, prob: 0.75}
+      - {sublinea: ANCLAJES, prob: 0.30}
+
+  - motivo: ACRILICAS
+    acompanantes:
+      - {sublinea: BROCHAS, prob: 0.45}
+      - {sublinea: FELPAS Y RODILLOS, prob: 0.31}
+      - {sublinea: MASILLA Y CINTA, prob: 0.08}
+
+  - motivo: ANTICORROSIVOS
+    acompanantes:
+      - {sublinea: SOLVENTES, prob: 0.59}
+      - {sublinea: BROCHAS, prob: 0.40}
+
+  - motivo: PISO CERAMICO
+    acompanantes:
+      - {sublinea: PEGA PISOS, prob: 0.73}
+      - {sublinea: DISCOS DE CORTE, prob: 0.10}
+
+  - motivo: TUBO PVC
+    acompanantes:
+      - {sublinea: ACCESORIOS PVC, prob: 0.80}
+      - {sublinea: PEGAMENTO PVC, prob: 0.60}
+
+  - motivo: TUBO INDUSTRIAL
+    acompanantes:
+      - {sublinea: SOLDADURA, prob: 0.40}
+      - {sublinea: DISCOS DE CORTE, prob: 0.45}
+      - {sublinea: ANTICORROSIVOS, prob: 0.20}
+
+  - motivo: TUBO ESTRUCTURAL
+    acompanantes:
+      - {sublinea: SOLDADURA, prob: 0.40}
+      - {sublinea: DISCOS DE CORTE, prob: 0.40}
+      - {sublinea: ANTICORROSIVOS, prob: 0.25}
+
+  - motivo: TALADROS
+    acompanantes:
+      - {sublinea: BROCAS, prob: 0.55}
+      - {sublinea: ANCLAJES, prob: 0.25}
+
+  - motivo: DUCHAS
+    acompanantes:
+      - {sublinea: CABLE ELECTRICO, prob: 0.30}
+      - {sublinea: TOMAS E INTERRUPTORES, prob: 0.20}
+      - {sublinea: CINTA AISLANTE, prob: 0.25}
+
+  # El Arkenstone. Algunos clientes compran el tablero acá; los carpinteros traen el suyo.
+  - motivo: SERV CORTE
+    variantes:
+      - {nombre: compra_tablero, prob: 0.55, agrega: [{sublinea: TABLEROS MELAMINA, prob: 1.0}]}
+      - {nombre: trae_tablero,   prob: 0.45, agrega: []}
+    acompanantes:
+      - {sublinea: CANTOS, prob: 0.75}
+      - {sublinea: TORNILLOS MELAMINA, prob: 0.70}
+      - {sublinea: BISAGRAS, prob: 0.60}
+      - {sublinea: JALADERAS, prob: 0.45}
+      - {sublinea: RIELES, prob: 0.30}
+      - {sublinea: PEGAMENTO MADERA, prob: 0.30}
+
+# ----------------------------------------------------------------------
+# Pedidos grandes: compras de obra partidas por el POS en facturas de 20 líneas
+# que comparten la misma proforma.
+# ----------------------------------------------------------------------
+pedidos_grandes:
+  prob_por_formato: {Tienda: 0.004, Bodega: 0.12}
+  lineas: [25, 70]
+  departamentos: [CONSTRUCCION, ACERO, FERRETERIA, FONTANERIA, ELECTRICO, PINTURAS]
+  cantidad_multiplicador: 2     # una obra compra más unidades por línea
+
+# ----------------------------------------------------------------------
+# Clasificación ABC del ERP (heredada; nadie recuerda quién la definió).
+#   Productos: Pareto por monto anual por artículo (A hasta 80 %, B hasta 95 %, C el resto).
+#   Servicios: siempre C, "porque no tienen inventario".
+# ----------------------------------------------------------------------
+abc:
+  corte_a: 0.80
+  corte_b: 0.95
+  servicios: C
+
+notes:
+  - "TIPO baskets: no lo procesa GeneradorDatosSinteticosPD; lo procesa el notebook de canastas"
+  - "SALIDAS: dim_sucursal, dim_articulo, fact_venta_linea, y _validacion_mision (verdad de terreno, NO va al modelo)"
+  - "SINTÉTICO: patrones inspirados en un análisis real de retail; ninguna cifra real"

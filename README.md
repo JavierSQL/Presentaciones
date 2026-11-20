@@ -19,3 +19,7 @@ En esta sesión, descubrirás cómo:
 * Realizar análisis predictivo básico.
 
 Esta sesión está diseñada para principiantes y no se requiere experiencia previa con KQL. Descubre cómo KQL puede transformar tu enfoque en el análisis de datos, sin importar el sector en el que trabajes.
+
+## La Comunidad del Dato
+Arquitectura de datos como ventaja competitiva: ingeniería, gobierno e IA en Microsoft Fabric (Comunidad de Data & AI Costa Rica, noviembre de 2026). Tres Fabric Data Agents contestan la misma pregunta de una ferretería, *¿qué productos atraen clientes a la tienda?*, y solo el que lee un modelo donde alguien decidió qué significa «atraer» acierta.
+En la carpeta [LaComunidadDelDato](LaComunidadDelDato/) están el deck, el YAML de la ferretería, el notebook de Fabric que genera los datos sintéticos y los scripts del modelo.
